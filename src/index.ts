@@ -18,6 +18,15 @@ interface GitHubRepoInfo {
     name: string
     // eslint-disable-next-line camelcase
     full_name: string
+    // eslint-disable-next-line camelcase
+    has_wiki: boolean
+}
+
+interface CodeOutput {
+    command: string
+    cwd?: string
+    stdout: string
+    stderr: string
 }
 
 const isDirectory = async (dirPath: string): Promise<boolean> => {
@@ -31,33 +40,62 @@ const isDirectory = async (dirPath: string): Promise<boolean> => {
 
 const runCliCommand = async (
     command: string, cwd: string
-): Promise<void> => new Promise((resolve, reject) => {
-    // eslint-disable-next-line no-console
-    console.debug(`(${cwd}) ${command}`);
+): Promise<CodeOutput> => new Promise<CodeOutput>((resolve, reject) => {
     exec(command, { cwd }, (err, stdout, stderr) => {
         if (err) {
             return reject(err);
         }
-        // eslint-disable-next-line no-console
-        console.debug(`stdout: ${stdout}`);
-        // eslint-disable-next-line no-console
-        console.debug(`stderr: ${stderr}`);
-        resolve();
+        resolve({ command, cwd, stderr, stdout });
     });
 });
 
-const gitCloneRepo = async (token: string, repoDir: string, repoFullName: string): Promise<void> => {
+const gitCloneRepo = async (token: string, repoDir: string, repoFullName: string): Promise<CodeOutput> => {
     await fs.mkdir(repoDir, { recursive: true });
-    await runCliCommand(`git clone "https://${token}@github.com/${repoFullName}.git" "${repoDir}"`,
+    return await runCliCommand(`git clone "https://${token}@github.com/${repoFullName}.git" "${repoDir}"`,
         path.dirname(repoDir));
 };
 
-const gitUpdateRepo = async (token: string, repoDir: string, repoFullName: string): Promise<void> => {
+const gitUpdateRepo = async (token: string, repoDir: string, repoFullName: string): Promise<CodeOutput> => {
     try {
-        await runCliCommand("git pull", repoDir);
+        return await runCliCommand("git pull", repoDir);
     } catch (updateError) {
         await fs.rmdir(repoDir, { recursive: true });
-        await gitCloneRepo(token, repoDir, repoFullName);
+        return await gitCloneRepo(token, repoDir, repoFullName);
+    }
+};
+
+const gitBackupRepo = async (repoDir: string, token: string, repoFullName: string): Promise<CodeOutput> => {
+    if (await isDirectory(path.join(repoDir, ".git"))) {
+        try {
+            return await gitUpdateRepo(token, repoDir, repoFullName);
+        } catch (updateError) {
+            throw updateError;
+        }
+    } else {
+        try {
+            return await gitCloneRepo(token, repoDir, repoFullName);
+        } catch (cloneError) {
+            await fs.rmdir(repoDir, { recursive: true });
+            throw cloneError;
+        }
+    }
+};
+
+const printCodeOutput = (codeOutput: CodeOutput) => {
+    let stringBuilder = ">> ";
+    if (codeOutput.cwd) {
+        stringBuilder += `(${codeOutput.cwd})\n   `;
+    }
+    stringBuilder += `${codeOutput.command}`;
+    // eslint-disable-next-line no-console
+    console.info(stringBuilder);
+    if (codeOutput.stdout && codeOutput.stdout.length > 0) {
+        // eslint-disable-next-line no-console
+        console.info(`   [stdout] ${codeOutput.stdout.trimEnd()}`);
+    }
+    if (codeOutput.stderr && codeOutput.stderr.length > 0) {
+        // eslint-disable-next-line no-console
+        console.info(`   [stderr] ${codeOutput.stderr.trimEnd()}`);
     }
 };
 
@@ -90,21 +128,28 @@ const gitUpdateRepo = async (token: string, repoDir: string, repoFullName: strin
             octokitRequestInfo.page++;
             emptyOrNotFullResults = repoData.length === 0 || repoData.length < octokitRequestInfo.per_page;
         } while (!emptyOrNotFullResults);
+        // eslint-disable-next-line no-console
+        console.info(`${repositories.length} repositories from the account '${owner}' were found:`);
 
         // Clone git repositories or update already cloned ones
+        let count = 1;
         for (const repo of repositories) {
             const repoDir = path.join(backupdir, repo.owner.login, repo.name);
-            if (await isDirectory(path.join(repoDir, ".git"))) {
+            // eslint-disable-next-line no-console
+            console.info(`(${count++}/${repositories.length}) Backup repo '${repo.full_name}'...`);
+            const codeOutput = await gitBackupRepo(repoDir, token, repo.full_name);
+            printCodeOutput(codeOutput);
+            // Try to clone the wiki (when enabled)
+            if (repo.has_wiki) {
                 try {
-                    await gitUpdateRepo(token, repoDir, repo.full_name);
-                } catch (updateError) {
-                    throw updateError;
-                }
-            } else {
-                try {
-                    await gitCloneRepo(token, repoDir, repo.full_name);
-                } catch (cloneError) {
-                    throw cloneError;
+                    // eslint-disable-next-line no-console
+                    console.info(`Try to backup wiki repo '${repo.full_name}.wiki'...`);
+                    const repoWikiDir = path.join(backupdir, repo.owner.login, `${repo.name}_wiki`);
+                    const codeOutputWiki = await gitBackupRepo(repoWikiDir, token, `${repo.full_name}.wiki`);
+                    printCodeOutput(codeOutputWiki);
+                } catch (error) {
+                    // eslint-disable-next-line no-console
+                    console.info(">> No wiki found");
                 }
             }
         }
