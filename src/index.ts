@@ -49,22 +49,28 @@ const runCliCommand = async (
     });
 });
 
-const gitCloneRepo = async (token: string, repoDir: string, repoFullName: string): Promise<CodeOutput> => {
+const gitCloneRepo = async (token: string, repoDir: string, repoFullName: string): Promise<CodeOutput[]> => {
+    const codeOutputs: CodeOutput[] = [];
     await fs.mkdir(repoDir, { recursive: true });
-    return await runCliCommand(`git clone "https://${token}@github.com/${repoFullName}.git" "${repoDir}"`,
-        path.dirname(repoDir));
+    codeOutputs.push({ command: `mkdir -p ${repoDir}`, stderr: "", stdout: ""})
+    codeOutputs.push(await runCliCommand(`git clone "https://${token}@github.com/${repoFullName}.git" "${repoDir}"`,
+        path.dirname(repoDir)));
+    return codeOutputs;
 };
 
-const gitUpdateRepo = async (token: string, repoDir: string, repoFullName: string): Promise<CodeOutput> => {
+const gitUpdateRepo = async (token: string, repoDir: string, repoFullName: string): Promise<CodeOutput[]> => {
     try {
-        return await runCliCommand("git pull", repoDir);
+        const codeOutputs: CodeOutput[] = [];
+        codeOutputs.push(await runCliCommand("git fetch --all", repoDir));
+        codeOutputs.push(await runCliCommand("git pull --all", repoDir));
+        return codeOutputs;
     } catch (updateError) {
         await fs.rmdir(repoDir, { recursive: true });
         return await gitCloneRepo(token, repoDir, repoFullName);
     }
 };
 
-const gitBackupRepo = async (repoDir: string, token: string, repoFullName: string): Promise<CodeOutput> => {
+const gitBackupRepo = async (repoDir: string, token: string, repoFullName: string): Promise<CodeOutput[]> => {
     if (await isDirectory(path.join(repoDir, ".git"))) {
         try {
             return await gitUpdateRepo(token, repoDir, repoFullName);
@@ -138,7 +144,7 @@ const printCodeOutput = (codeOutput: CodeOutput) => {
             // eslint-disable-next-line no-console
             console.info(`(${count++}/${repositories.length}) Backup repo '${repo.full_name}'...`);
             const codeOutput = await gitBackupRepo(repoDir, token, repo.full_name);
-            printCodeOutput(codeOutput);
+            codeOutput.forEach(printCodeOutput);
             // Try to clone the wiki (when enabled)
             if (repo.has_wiki) {
                 try {
@@ -146,7 +152,7 @@ const printCodeOutput = (codeOutput: CodeOutput) => {
                     console.info(`Try to backup wiki repo '${repo.full_name}.wiki'...`);
                     const repoWikiDir = path.join(backupdir, repo.owner.login, `${repo.name}_wiki`);
                     const codeOutputWiki = await gitBackupRepo(repoWikiDir, token, `${repo.full_name}.wiki`);
-                    printCodeOutput(codeOutputWiki);
+                    codeOutputWiki.forEach(printCodeOutput);
                 } catch (error) {
                     // eslint-disable-next-line no-console
                     console.info(">> No wiki found");
