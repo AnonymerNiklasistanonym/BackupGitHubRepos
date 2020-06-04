@@ -1,17 +1,9 @@
+import type { Config } from "../schemas/config.schema";
 import { exec } from "child_process";
 import { promises as fs } from "fs";
 import { Octokit } from "@octokit/rest";
 import path from "path";
 
-interface ConfigDataGitHubApi {
-    oauthtoken: string
-    owner: string
-}
-
-interface ConfigData {
-    githubapi: ConfigDataGitHubApi
-    backupdir: string
-}
 
 interface GitHubRepoInfo {
     owner: { login: string }
@@ -52,7 +44,7 @@ const runCliCommand = async (
 const gitCloneRepo = async (token: string, repoDir: string, repoFullName: string): Promise<CodeOutput[]> => {
     const codeOutputs: CodeOutput[] = [];
     await fs.mkdir(repoDir, { recursive: true });
-    codeOutputs.push({ command: `mkdir -p ${repoDir}`, stderr: "", stdout: ""})
+    codeOutputs.push({ command: `mkdir -p ${repoDir}`, stderr: "", stdout: "" });
     codeOutputs.push(await runCliCommand(`git clone "https://${token}@github.com/${repoFullName}.git" "${repoDir}"`,
         path.dirname(repoDir)));
     return codeOutputs;
@@ -109,11 +101,11 @@ const printCodeOutput = (codeOutput: CodeOutput) => {
     try {
         // Read config data
         const configFileContent = await fs.readFile(path.join(__dirname, "..", "config.json"));
-        const configData = JSON.parse(configFileContent.toString()) as ConfigData;
+        const configData = JSON.parse(configFileContent.toString()) as Config;
         const backupdir = path.isAbsolute(configData.backupdir)
             ? configData.backupdir : path.join(__dirname, "..", configData.backupdir);
         const token = configData.githubapi.oauthtoken;
-        const owner = configData.githubapi.owner;
+        const owner = configData.githubapi.accountname;
 
         // Create backup directory
         await fs.mkdir(backupdir, { recursive: true });

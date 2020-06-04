@@ -1,7 +1,8 @@
 {
+    "$schema": "./schemas/config.schema.json",
+    "backupdir": "backup",
     "githubapi": {
-        "oauthtoken": "TODO_FULL_REPO_LEVEL_ACCESS_TOKEN",
-        "owner": "AnonymerNiklasistanonym"
-    },
-    "backupdir": "backup"
+        "accountname": "AnonymerNiklasistanonym",
+        "oauthtoken": "TODO_FULL_REPO_LEVEL_ACCESS_TOKEN"
+    }
 }
