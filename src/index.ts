@@ -1,4 +1,4 @@
-import type { Config } from "../schemas/config.schema";
+import type { Config } from "./config.schema";
 import { exec } from "child_process";
 import { promises as fs } from "fs";
 import { Octokit } from "@octokit/rest";
@@ -47,6 +47,8 @@ const gitCloneRepo = async (token: string, repoDir: string, repoFullName: string
     codeOutputs.push({ command: `mkdir -p ${repoDir}`, stderr: "", stdout: "" });
     codeOutputs.push(await runCliCommand(`git clone "https://${token}@github.com/${repoFullName}.git" "${repoDir}"`,
         path.dirname(repoDir)));
+    codeOutputs.push(await runCliCommand("git fetch --all", repoDir));
+    codeOutputs.push(await runCliCommand("git pull --all", repoDir));
     return codeOutputs;
 };
 
