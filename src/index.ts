@@ -134,11 +134,10 @@ const printCodeOutput = (codeOutput: CodeOutput) => {
         console.info(`${repositories.length} repositories from the account '${owner}' were found:`);
 
         // Clone git repositories or update already cloned ones
-        let count = 1;
-        for (const repo of repositories) {
+        await Promise.all(repositories.map(async (repo, index) => {
             const repoDir = path.join(backupDir, repo.owner.login, repo.name);
             // eslint-disable-next-line no-console
-            console.info(`(${count++}/${repositories.length}) Backup repo '${repo.full_name}'...`);
+            console.info(`(${index + 1}/${repositories.length}) Backup repo '${repo.full_name}'...`);
             const codeOutput = await gitBackupRepo(repoDir, token, repo.full_name);
             codeOutput.forEach(printCodeOutput);
             // Try to clone the wiki (when enabled)
@@ -151,10 +150,10 @@ const printCodeOutput = (codeOutput: CodeOutput) => {
                     codeOutputWiki.forEach(printCodeOutput);
                 } catch (error) {
                     // eslint-disable-next-line no-console
-                    console.info(">> No wiki found");
+                    console.info(">> No wiki found ('${repo.full_name}.wiki')");
                 }
             }
-        }
+        }));
     } catch (error) {
         throw error;
     }

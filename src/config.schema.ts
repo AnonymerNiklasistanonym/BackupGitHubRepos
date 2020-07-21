@@ -11,11 +11,11 @@
 export type Schema = string;
 
 export interface Config {
-    $schema?: Schema;
+    $schema?: Schema
     /**
      * Directory path where the git repositories for the given account should be backed up
      */
-    backupDir: string;
+    backupDir: string
     /**
      * GitHub API information to backup all repositories the account has access to
      */
@@ -23,10 +23,10 @@ export interface Config {
         /**
          * The GitHub API token that allows complete repo access to even clone private repositories
          */
-        oauthToken: string;
+        oauthToken: string
         /**
          * The GitHub account name
          */
-        accountName: string;
-    };
+        accountName: string
+    }
 }
