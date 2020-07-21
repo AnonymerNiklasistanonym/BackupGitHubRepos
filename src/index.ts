@@ -104,13 +104,15 @@ const printCodeOutput = (codeOutput: CodeOutput) => {
         // Read config data
         const configFileContent = await fs.readFile(path.join(__dirname, "..", "config.json"));
         const configData = JSON.parse(configFileContent.toString()) as Config;
-        const backupdir = path.isAbsolute(configData.backupdir)
-            ? configData.backupdir : path.join(__dirname, "..", configData.backupdir);
-        const token = configData.githubapi.oauthtoken;
-        const owner = configData.githubapi.accountname;
+        const token = configData.githubApi.oauthToken;
+        const owner = configData.githubApi.accountName;
+        const backupDirTemp = process.env.BACKUP_GIT_REPOS_BACKUP_DIR
+            ? process.env.BACKUP_GIT_REPOS_BACKUP_DIR : configData.backupDir;
+        const backupDir = path.isAbsolute(backupDirTemp)
+            ? backupDirTemp : path.join(__dirname, "..", backupDirTemp);
 
         // Create backup directory
-        await fs.mkdir(backupdir, { recursive: true });
+        await fs.mkdir(backupDir, { recursive: true });
 
         // Get git repositories
         const octokit = new Octokit({
@@ -134,7 +136,7 @@ const printCodeOutput = (codeOutput: CodeOutput) => {
         // Clone git repositories or update already cloned ones
         let count = 1;
         for (const repo of repositories) {
-            const repoDir = path.join(backupdir, repo.owner.login, repo.name);
+            const repoDir = path.join(backupDir, repo.owner.login, repo.name);
             // eslint-disable-next-line no-console
             console.info(`(${count++}/${repositories.length}) Backup repo '${repo.full_name}'...`);
             const codeOutput = await gitBackupRepo(repoDir, token, repo.full_name);
@@ -144,7 +146,7 @@ const printCodeOutput = (codeOutput: CodeOutput) => {
                 try {
                     // eslint-disable-next-line no-console
                     console.info(`Try to backup wiki repo '${repo.full_name}.wiki'...`);
-                    const repoWikiDir = path.join(backupdir, repo.owner.login, `${repo.name}_wiki`);
+                    const repoWikiDir = path.join(backupDir, repo.owner.login, `${repo.name}_wiki`);
                     const codeOutputWiki = await gitBackupRepo(repoWikiDir, token, `${repo.full_name}.wiki`);
                     codeOutputWiki.forEach(printCodeOutput);
                 } catch (error) {

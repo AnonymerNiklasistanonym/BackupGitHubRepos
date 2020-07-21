@@ -15,18 +15,18 @@ export interface Config {
     /**
      * Directory path where the git repositories for the given account should be backed up
      */
-    backupdir: string;
+    backupDir: string;
     /**
      * GitHub API information to backup all repositories the account has access to
      */
-    githubapi: {
+    githubApi: {
         /**
          * The GitHub API token that allows complete repo access to even clone private repositories
          */
-        oauthtoken: string;
+        oauthToken: string;
         /**
          * The GitHub account name
          */
-        accountname: string;
+        accountName: string;
     };
 }

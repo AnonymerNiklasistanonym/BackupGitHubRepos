@@ -7,20 +7,20 @@
             "title": "Schema",
             "type": "string"
         },
-        "backupdir": {
+        "backupDir": {
             "description": "Directory path where the git repositories for the given account should be backed up",
             "type": "string"
         },
-        "githubapi": {
+        "githubApi": {
             "additionalProperties": false,
             "description": "GitHub API information to backup all repositories the account has access to",
-            "required": ["oauthtoken", "accountname"],
+            "required": ["oauthToken", "accountName"],
             "properties": {
-                "oauthtoken": {
+                "oauthToken": {
                     "description": "The GitHub API token that allows complete repo access to even clone private repositories",
                     "type": "string"
                 },
-                "accountname": {
+                "accountName": {
                     "description": "The GitHub account name",
                     "type": "string"
                 }
@@ -28,8 +28,8 @@
         }
     },
     "required": [
-        "backupdir",
-        "githubapi"
+        "backupDir",
+        "githubApi"
     ],
     "type": "object"
 }
