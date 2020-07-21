@@ -150,7 +150,7 @@ const printCodeOutput = (codeOutput: CodeOutput) => {
                     codeOutputWiki.forEach(printCodeOutput);
                 } catch (error) {
                     // eslint-disable-next-line no-console
-                    console.info(">> No wiki found ('${repo.full_name}.wiki')");
+                    console.info(`>> No wiki found ('${repo.full_name}.wiki')`);
                 }
             }
         }));
